@@ -9,7 +9,7 @@
 #include<set>
 using namespace std;
 
-/*存储图节点*/
+//存储图节点
 struct node {
 	string name;
 	vector<string> parent;
@@ -47,7 +47,7 @@ void input(vector<vector<string>>& Vec_Dti, string FileName) {
 	vector<string> temp_line;
 	string line;
 	ifstream in(FileName);  //读入文件
-	regex pat_regex("[a-z]+");  //匹配原则 一个或多个小写字母
+	regex pat_regex("[a-z]+");  //匹配一个或多个小写字母
 
 	while (getline(in, line)) {  //按行读取
 		temp_line.clear();
@@ -65,7 +65,7 @@ void initData(map<string, node>& m, vector<vector<string>> inData) {
 	for (int i = 0; i < inData.size(); i++) {
 		if (inData[i].size() > 0) {
 			node tmp;
-			tmp.name = inData[i][0];//记录每一行第一个节点的名字
+			tmp.name = inData[i][0];//记录每一行第一个节点的名字，即父节点
 			for (int j = 1; j < inData[i].size(); j++) {
 				if (inData[i].size() > j) {
 					tmp.child.push_back(inData[i][j]);//将每一行第一个节点后的所有节点记录到该节点的孩子节点数组中
@@ -83,6 +83,45 @@ void initData(map<string, node>& m, vector<vector<string>> inData) {
 					m[inData[i][j]].parent.push_back(inData[i][0]);
 				}
 			}
+		}
+	}
+}
+
+
+
+void ASAP(vector<vector<string>>& output_ASAP, map<string, node>& m) {
+	while (!m.empty()) {//当图中所有节点都被删除时结束
+		vector<string> tmp;
+		for (auto it = m.begin(); it != m.end(); ) {
+			if (it->second.parent.empty()) {//找到所有没有父节点的节点，将其存在一个tmp数组中
+				tmp.push_back(it->first);
+				it = m.erase(it); // 删除节点
+			}
+			else {
+				++it;
+			}
+		}
+		if (!tmp.empty()) {
+			output_ASAP.push_back(tmp);
+		}
+		delete_(m, tmp);
+	}
+}
+
+
+
+void delete_(map<string, node>& m, const vector<string>& key) {
+	for (const string& node_name : key) {
+		auto it = m.find(node_name);
+		if (it != m.end()) {
+			m.erase(it);
+		}
+		for (auto& pair : m) {
+			auto& node = pair.second;
+			auto new_end = remove(node.parent.begin(), node.parent.end(), node_name);
+			node.parent.erase(new_end, node.parent.end());
+			auto new_end2 = remove(node.child.begin(), node.child.end(), node_name);
+			node.child.erase(new_end2, node.child.end());
 		}
 	}
 }
@@ -121,8 +160,10 @@ void print(const vector<vector<string>>& output, const Model& model) {
 		}
 
 		printCategory(andSet, model.and_assign, "and_assign");
+		cout << ",";
 
 		printCategory(orSet, model.or_assign, "or_assign");
+		cout << ",";
 
 		printCategory(notSet, model.not_assign, "not_assign");
 
@@ -132,7 +173,7 @@ void print(const vector<vector<string>>& output, const Model& model) {
 
 void printCategory(const set<string>& categorySet, const vector<string>& modelCategory, const string& category) {
 	if (categorySet.empty()) {
-		cout << "{ } ";
+		cout << "{ }";
 	}
 	else {
 		cout << "{ ";
@@ -144,46 +185,8 @@ void printCategory(const set<string>& categorySet, const vector<string>& modelCa
 			cout << item;
 			first = false;
 		}
-		cout << " } ";
+		cout << " }";
 	}
 
 }
 
-
-
-void ASAP(vector<vector<string>>& output_ASAP, map<string, node>& m) {
-	while (!m.empty()) {//当图中所有节点都被删除时结束
-		vector<string> tmp;
-		for (auto it = m.begin(); it != m.end(); ) {
-			if (it->second.parent.empty()) {//找到所有没有父节点的节点，将其存在一个tmp数组中
-				tmp.push_back(it->first);
-				it = m.erase(it); // 删除节点
-			}
-			else {
-				++it;
-			}
-		}
-		if (!tmp.empty()) {
-			output_ASAP.push_back(tmp);
-		}
-		delete_(m, tmp);
-	}
-}
-
-
-
-void delete_(map<string, node>& m, const vector<string>& key) {
-	for (const string& node_name : key) {
-		auto it = m.find(node_name);
-		if (it != m.end()) {
-			m.erase(it);
-		}
-		for (auto& pair : m) {
-			auto& node = pair.second;
-			auto new_end = std::remove(node.parent.begin(), node.parent.end(), node_name);
-			node.parent.erase(new_end, node.parent.end());
-			auto new_end2 = std::remove(node.child.begin(), node.child.end(), node_name);
-			node.child.erase(new_end2, node.child.end());
-		}
-	}
-}
