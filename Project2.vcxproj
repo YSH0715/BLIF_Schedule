@@ -129,6 +129,7 @@
   <ItemGroup>
     <ClInclude Include="ASAP.h" />
     <ClInclude Include="blif2verilog.h" />
+    <ClInclude Include="MR-LCS.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

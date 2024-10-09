@@ -16,6 +16,7 @@ int main() {
 
     // 读取BLIF文件
     Model model = readBlifFile(blifFilename);
+    getGate(model);
 
     // 将BLIF转换为Verilog
     writeVerilogFile(model, verilogFilename);
@@ -24,8 +25,10 @@ int main() {
 
     cout << "ASAP: " << endl;
     print(model);
-    getGate(model);
     ASAPprintGate(model);
+
+    //cout << "MR_LCS: " << endl;
+   // MR_LCS_printGate(model);
 
 
 
