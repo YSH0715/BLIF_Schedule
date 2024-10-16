@@ -24,6 +24,12 @@
     <ClInclude Include="MR-LCS.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ALAP.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Hu.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

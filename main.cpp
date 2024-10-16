@@ -7,6 +7,9 @@
 #include <unordered_map>
 #include "blif2verilog.h"
 #include "ASAP.h"
+#include "ALAP.h"
+#include "Hu.h"
+#include "MR-LCS.h"
 using namespace std;
 
 
@@ -26,11 +29,15 @@ int main() {
     cout << "ASAP: " << endl;
     print(model);
     ASAPprintGate(model);
+    cout << "ALAP: " << endl;
+    print(model);
+    printGateALAP(model);
+    //cout << "Hu: " << endl;
+    //HuScheduling(model);
+    cout << "MR_LCS: " << endl;
+    printGateMR_LCS(model);
 
-    //cout << "MR_LCS: " << endl;
-   // MR_LCS_printGate(model);
-
-
+    
 
 
     return 0;

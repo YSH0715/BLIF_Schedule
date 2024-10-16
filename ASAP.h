@@ -39,7 +39,7 @@ void ASAPprintGate(Model model) {
 	ASAP(output_ASAP, m);
 	print(output_ASAP,model);
 
-	system("PAUSE");
+	//system("PAUSE");
 }
 
 
