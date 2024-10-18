@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -14,10 +14,11 @@ int nodecount;
 int resource;
 int ALAPcycle;
 map<string, int> max_resource_needed = { {"AND_GATE",1},{"OR_GATE",1},{"NOT_GATE",1} };
-map<string, int> tem_resource = max_resource_needed;
-void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int latency_constraint, map<string, int>& last_time);
+map<string, int> tem_resource = max_resource_needed;  //存储暂时的资源数量可能会变化
+void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int latency_constraint, map<string, int>& last_time, Model model);
 void printMR_LCS(const vector<vector<string>>& output, Model model);
 void Last_Cycle(map<string, int>& last_time, vector<vector<string>>& output_ALAP, int latency_constraint, Model model);
+void delete_input(map<string, node>& m, Model model);
 
 
 void printGateMR_LCS(Model model) {
@@ -28,109 +29,209 @@ void printGateMR_LCS(Model model) {
 
     map<string, node> m;
     initData(m, inData);
+    delete_input(m, model);
+    map<string, node> n = m;
 
     vector<vector<string>> output_ALAP;
     ALAP(output_ALAP, m);
     reverse(output_ALAP.begin(), output_ALAP.end());
-    ALAPcycle = output_ALAP.size() - 1;
+    ALAPcycle = output_ALAP.size();
 
     vector<vector<string>> output_MR_LCS;
     map<string, int> last_time;
-    int latency_constraint = 5;   // 假设延迟约束为5，根据需要调整
-
+    int latency_constraint ;   //cycle数
+    cout << "输入cycle数：" ;
+    cin >> latency_constraint;
     Last_Cycle(last_time, output_ALAP, latency_constraint, model);
 
-    MR_LCS(output_MR_LCS, m, latency_constraint, last_time);
-    printMR_LCS(output_MR_LCS, model);
-    //system("PAUSE");
+
+    MR_LCS(output_MR_LCS, n, latency_constraint, last_time, model);
+    //printMR_LCS(output_MR_LCS, model);
+    // system("PAUSE");
 }
 
 void Last_Cycle(map<string, int>& last_time, vector<vector<string>>& output, int latency_constraint, Model model) {
+    if (output.empty()) {
+        cout << "Output vector is empty.";
+        return;
+    }
     int count = 0;
     for (const auto& i : output) {
         for (const auto& j : i) {
             bool flag = false;
             for (int i = 0; i < model.and_assign.size(); i++) {
-                if (j == model.and_assign.at(i)) {
+                if (std::find(model.and_assign.begin(), model.and_assign.end(), j) != model.and_assign.end()) {
                     flag = true;
                 }
             }
             for (int i = 0; i < model.or_assign.size(); i++) {
-                if (j == model.or_assign.at(i)) {
+                if (std::find(model.or_assign.begin(), model.or_assign.end(), j) != model.or_assign.end()) {
                     flag = true;
                 }
             }
             for (int i = 0; i < model.not_assign.size(); i++) {
-                if (j == model.not_assign.at(i)) {
+                if (std::find(model.not_assign.begin(), model.not_assign.end(), j) != model.not_assign.end()) {
                     flag = true;
                 }
             }
             if (flag == true) {
-                last_time[j] = latency_constraint - ALAPcycle + count - 1;
+                last_time[j] = latency_constraint - ALAPcycle + count;
             }
         }
         count++;
     }
 }
+void delete_input(map<string, node>& m, Model model) {
+    vector<string> tmp;
+    for (auto it = m.begin(); it != m.end(); ) {
+        bool flag = false;
+        for (const auto& assign : model.and_assign) {
+            if (it->first == assign) {
+                flag = true;
+                break;
+            }
+        }
 
-void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int latency_constraint, map<string, int>& last_time) {
-    if (latency_constraint > nodecount) {
+        for (const auto& assign : model.or_assign) {
+            if (it->first == assign) {
+                flag = true;
+                break;
+            }
+        }
+
+        for (const auto& assign : model.not_assign) {
+            if (it->first == assign) {
+                flag = true;
+                break;
+            }
+        }
+        if (flag == false) {
+            tmp.push_back(it->first);
+            it = m.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
+    delete_(m, tmp);
+}
+void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int latency_constraint, map<string, int>& last_time, Model model) {
+    if (latency_constraint >= nodecount) {
         resource = max_resource_needed["AND_GATE"] + max_resource_needed["OR_GATE"] + max_resource_needed["NOT_GATE"];
     }
-    else if (ALAPcycle <= latency_constraint <= nodecount) {
+    else if (ALAPcycle <= latency_constraint && latency_constraint < nodecount) {
+        while (!last_time.empty()) {
+            vector<string> tmp;
+            vector<string> to_erase;
+            for (auto it = last_time.begin(); it != last_time.end(); ) {
+                if (it->second == 0) {
+                    if (find(model.and_assign.begin(), model.and_assign.end(), it->first) != model.and_assign.end()) {
+                        if (tem_resource["AND_GATE"] > 0) {
+                            tem_resource["AND_GATE"] -= 1;
+                        }
+                        else {
+                            max_resource_needed["AND_GATE"] += 1;
+                        }
+                    }
+                    if (find(model.or_assign.begin(), model.or_assign.end(), it->first) != model.or_assign.end()) {
+                        if (tem_resource["OR_GATE"] > 0) {
+                            tem_resource["OR_GATE"] -= 1;
+                        }
+                        else {
+                            max_resource_needed["OR_GATE"] += 1;
+                        }
+                    }
+                    if (find(model.not_assign.begin(), model.not_assign.end(), it->first) != model.not_assign.end()) {
+                        if (tem_resource["NOT_GATE"] > 0) {
+                            tem_resource["NOT_GATE"] -= 1;
+                        }
+                        else {
+                            max_resource_needed["NOT_GATE"] += 1;
+                        }
+                    }
+                    tmp.push_back(it->first);
+                    to_erase.push_back(it->first);
+                    it = last_time.erase(it);
+                }
+                else {
+                    --it->second;
+                    ++it;
+                }
+            }
+            while (tem_resource["AND_GATE"] > 0 || tem_resource["OR_GATE"] > 0 || tem_resource["NOT_GATE"] > 0) {
+                multimap<int, string> sorted_map;
+                for (const auto& pair : last_time) {
+                    sorted_map.insert({ pair.second, pair.first });
+                }
+                for (auto it = sorted_map.begin(); it != sorted_map.end(); ) {
+                    if (m[it->second].parent.size() == 0) {
+                        if (find(model.and_assign.begin(), model.and_assign.end(), it->second) != model.and_assign.end()) {
+                            if (tem_resource["AND_GATE"] > 0) {
+                                tem_resource["AND_GATE"] -= 1;
+                                tmp.push_back(it->second);
+                                to_erase.push_back(it->second);
+                                it = sorted_map.erase(it);
+                            }
+                            else {
+                                ++it;
+                                continue;
+                            }
+                        }
+                        if (find(model.or_assign.begin(), model.or_assign.end(), it->second) != model.or_assign.end()) {
+                            if (tem_resource["OR_GATE"] > 0) {
+                                tem_resource["OR_GATE"] -= 1;
+                                tmp.push_back(it->second);
+                                to_erase.push_back(it->second);
+                                it = sorted_map.erase(it);
+                            }
+                            else {
+                                ++it;
+                                continue;
+                            }
+                        }
+                        if (find(model.not_assign.begin(), model.not_assign.end(), it->second) != model.not_assign.end()) {
+                            if (tem_resource["NOT_GATE"] > 0) {
+                                tem_resource["NOT_GATE"] -= 1;
+                                tmp.push_back(it->second);
+                                to_erase.push_back(it->second);
+                                it = sorted_map.erase(it);
+                            }
+                            else {
+                                ++it;
+                                continue;
+                            }
+                        }
+                    }
+                    else {
+                        ++it;
+                    }
+                }
+                break;
+            }
+            if (!tmp.empty()) {
+                output_MR_LCS.push_back(tmp);
+            }
+            tem_resource = max_resource_needed;
+            for (const auto& key : to_erase) {
+                if (last_time.find(key) != last_time.end()) {
+                    last_time.erase(key);
+                }
+            }
+           // tem_resource = max_resource_needed;
+            delete_(m, tmp);
+        }
+        printMR_LCS(output_MR_LCS, model);
 
     }
     else {
-        cout << "无法在规定时间内完成任务";
+        cout << "时间太少无法完成整体任务";
     }
-
-    /*int current_latency = 0; // 当前延迟
-    while (!m.empty()) { // 当图中的所有节点都被删除时结束
-        vector<string> tmp;
-        int used_resources = 0;
-
-        for (auto it = m.begin(); it != m.end();) {
-            // 找到没有父节点且可用资源充足的节点
-            if (it->second.parent.empty() && (used_resources + it->second.resource_needed <= available_resources)) {
-                tmp.push_back(it->first);
-                used_resources += it->second.resource_needed; // 更新已用资源
-                it = m.erase(it); // 删除节点
-            }
-            else {
-                ++it;
-            }
-        }
-
-        if (!tmp.empty()) {
-            output_MR_LCS.push_back(tmp);
-            current_latency++; // 增加当前延迟
-            if (current_latency >= latency_constraint) {
-                break; // 达到延迟约束，停止调度
-            }
-        }
-        delete_(m, tmp); // 删除节点及其关系
-    }*/
 }
 
-void printMR_LCS(const vector<vector<string>>& output, Model model) {
-    int count = 0;
-    cout << "PIs :";
-    for (const auto& input : model.inputs) {
-        cout << " " << input;
-    }
-    cout << " Output :";
-    for (const auto& output_name : model.outputs) {
-        cout << " " << output_name;
-    }
-    cout << endl;
 
-    for (const auto& cycle : output) {
-        cout << "Cycle " << count << ":";
-        for (const auto& j : cycle) {
-            cout << " " << j;
-        }
-        cout << endl;
-        count++;
-    }
+
+void printMR_LCS(const vector<vector<string>>& output, Model model) {
+    int a = max_resource_needed["AND_GATE"] + max_resource_needed["OR_GATE"] + max_resource_needed["NOT_GATE"];
+    cout << "resource_&:" << max_resource_needed["AND_GATE"] << " resource_|:" << max_resource_needed["OR_GATE"] << " resource_!:" << max_resource_needed["NOT_GATE"];
 }
 
