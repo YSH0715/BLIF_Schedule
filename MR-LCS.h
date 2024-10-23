@@ -15,9 +15,10 @@ int resource;
 int ALAPcycle;
 map<string, int> max_resource_needed = { {"AND_GATE",1},{"OR_GATE",1},{"NOT_GATE",1} };
 map<string, int> tem_resource = max_resource_needed;  //存储暂时的资源数量可能会变化
+map<string, int>ComsumingTime = { {"AND_GATE", 2},{"OR_GATE", 3},{"NOT_GATE", 1} };
 void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int latency_constraint, map<string, int>& last_time, Model model);
 void printMR_LCS(const vector<vector<string>>& output, Model model);
-void Last_Cycle(map<string, int>& last_time, vector<vector<string>>& output_ALAP, int latency_constraint, Model model);
+void Last_Cycle(map<string, int>& last_time, vector<vector<string>>& output, int latency_constraint, map<string, node>& m, Model model);
 void delete_input(map<string, node>& m, Model model);
 
 
@@ -31,18 +32,17 @@ void printGateMR_LCS(Model model) {
     initData(m, inData);
     delete_input(m, model);
     map<string, node> n = m;
-
+    map<string, node> a = m;
     vector<vector<string>> output_ALAP;
     ALAP(output_ALAP, m);
-    reverse(output_ALAP.begin(), output_ALAP.end());
-    ALAPcycle = output_ALAP.size();
+    //ALAPcycle = output_ALAP.size();
 
     vector<vector<string>> output_MR_LCS;
     map<string, int> last_time;
-    int latency_constraint ;   //cycle数
-    cout << "输入cycle数：" ;
+    int latency_constraint;   //cycle数
+    cout << "输入cycle数：";
     cin >> latency_constraint;
-    Last_Cycle(last_time, output_ALAP, latency_constraint, model);
+    Last_Cycle(last_time, output_ALAP, latency_constraint, a, model);
 
 
     MR_LCS(output_MR_LCS, n, latency_constraint, last_time, model);
@@ -50,7 +50,7 @@ void printGateMR_LCS(Model model) {
     // system("PAUSE");
 }
 
-void Last_Cycle(map<string, int>& last_time, vector<vector<string>>& output, int latency_constraint, Model model) {
+void Last_Cycle(map<string, int>& last_time, vector<vector<string>>& output, int latency_constraint, map<string, node>& m, Model model) {
     if (output.empty()) {
         cout << "Output vector is empty.";
         return;
@@ -58,29 +58,52 @@ void Last_Cycle(map<string, int>& last_time, vector<vector<string>>& output, int
     int count = 0;
     for (const auto& i : output) {
         for (const auto& j : i) {
-            bool flag = false;
+            int time = INT_MAX;
             for (int i = 0; i < model.and_assign.size(); i++) {
                 if (std::find(model.and_assign.begin(), model.and_assign.end(), j) != model.and_assign.end()) {
-                    flag = true;
+                    if (m[j].child.empty()) {
+                        last_time[j] = latency_constraint - 2;
+                    }
+                    else {
+                        for (const auto& str : m[j].child) {
+                            time = min(time, last_time[str]);
+                        }
+                        last_time[j] = time - 2;
+                    }
                 }
             }
             for (int i = 0; i < model.or_assign.size(); i++) {
                 if (std::find(model.or_assign.begin(), model.or_assign.end(), j) != model.or_assign.end()) {
-                    flag = true;
+                    if (m[j].child.empty()) {
+                        last_time[j] = latency_constraint - 3;
+                    }
+                    else {
+                        for (const auto& str : m[j].child) {
+                            time = min(time, last_time[str]);
+                        }
+                        last_time[j] = time - 3;
+                    }
                 }
             }
             for (int i = 0; i < model.not_assign.size(); i++) {
                 if (std::find(model.not_assign.begin(), model.not_assign.end(), j) != model.not_assign.end()) {
-                    flag = true;
+                    if (m[j].child.empty()) {
+                        last_time[j] = latency_constraint - 1;
+                    }
+                    else {
+                        for (const auto& str : m[j].child) {
+                            time = min(time, last_time[str]);
+                        }
+                        last_time[j] = time - 1;
+                    }
                 }
             }
-            if (flag == true) {
-                last_time[j] = latency_constraint - ALAPcycle + count;
-            }
+            ALAPcycle = latency_constraint - last_time[j];
         }
         count++;
     }
 }
+
 void delete_input(map<string, node>& m, Model model) {
     vector<string> tmp;
     for (auto it = m.begin(); it != m.end(); ) {
@@ -115,6 +138,7 @@ void delete_input(map<string, node>& m, Model model) {
     }
     delete_(m, tmp);
 }
+
 void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int latency_constraint, map<string, int>& last_time, Model model) {
     if (latency_constraint >= nodecount) {
         resource = max_resource_needed["AND_GATE"] + max_resource_needed["OR_GATE"] + max_resource_needed["NOT_GATE"];
@@ -217,7 +241,7 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
                     last_time.erase(key);
                 }
             }
-           // tem_resource = max_resource_needed;
+            // tem_resource = max_resource_needed;
             delete_(m, tmp);
         }
         printMR_LCS(output_MR_LCS, model);
