@@ -140,6 +140,8 @@ void delete_input(map<string, node>& m, Model model) {
 }
 
 void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int latency_constraint, map<string, int>& last_time, Model model) {
+    int and_timecount = 2;
+    int or_timecount = 3;
     if (latency_constraint >= nodecount) {
         resource = max_resource_needed["AND_GATE"] + max_resource_needed["OR_GATE"] + max_resource_needed["NOT_GATE"];
     }
@@ -150,20 +152,26 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
             for (auto it = last_time.begin(); it != last_time.end(); ) {
                 if (it->second == 0) {
                     if (find(model.and_assign.begin(), model.and_assign.end(), it->first) != model.and_assign.end()) {
-                        if (tem_resource["AND_GATE"] > 0) {
-                            tem_resource["AND_GATE"] -= 1;
-                        }
-                        else {
-                            max_resource_needed["AND_GATE"] += 1;
-                        }
+                        if (and_timecount==2) {
+                            if (tem_resource["AND_GATE"] > 0) {
+                                tem_resource["AND_GATE"] -= 1;
+                            }
+                            else {
+                                max_resource_needed["AND_GATE"] += 1;
+                            }
+                            and_timecount = 0;
+                        }                     
                     }
                     if (find(model.or_assign.begin(), model.or_assign.end(), it->first) != model.or_assign.end()) {
-                        if (tem_resource["OR_GATE"] > 0) {
+                        if (or_timecount==3) {
+                            if (tem_resource["OR_GATE"] > 0) {
                             tem_resource["OR_GATE"] -= 1;
-                        }
-                        else {
+                            }
+                            else {
                             max_resource_needed["OR_GATE"] += 1;
+                            }
                         }
+                        or_timecount = 0;
                     }
                     if (find(model.not_assign.begin(), model.not_assign.end(), it->first) != model.not_assign.end()) {
                         if (tem_resource["NOT_GATE"] > 0) {
@@ -181,6 +189,8 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
                     --it->second;
                     ++it;
                 }
+                and_timecount++;
+                or_timecount++;
             }
             while (tem_resource["AND_GATE"] > 0 || tem_resource["OR_GATE"] > 0 || tem_resource["NOT_GATE"] > 0) {
                 multimap<int, string> sorted_map;
