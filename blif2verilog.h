@@ -11,7 +11,7 @@ using namespace std;
 
 
 
-// 一个简单的结构体，用于存储模型信息
+
 struct Model {
     std::string name;
     std::vector<std::string> inputs;
@@ -20,14 +20,13 @@ struct Model {
     std::vector<std::string> latches;
     std::vector<std::string> biaodashis;
     std::vector<char> digits;
-    vector<string> and_assign;//与门
-    vector<string> or_assign;//或门
-    vector<string> not_assign;//非门
+    vector<string> and_assign;
+    vector<string> or_assign;
+    vector<string> not_assign;
 };
 
 
-// 读取BLIF文件并返回模型信息
-Model readBlifFile(const std::string& filename) {
+Model getAssign(const std::string& filename) {
     Model model;
     std::ifstream file(filename);
     std::string line;
@@ -70,7 +69,6 @@ Model readBlifFile(const std::string& filename) {
         else if (token == ".latch") {
             std::string input, output, type, control;
             iss >> input >> output;
-
             model.latches.push_back("latch (" + input + ", " + output + ");");
         }
         else if (token == ".end") {
@@ -93,7 +91,6 @@ Model readBlifFile(const std::string& filename) {
                     count++;
                     countDash++;
                 }
-
             }
             if (countDash == 0 && count2 == 1) {
                 if (count0 == 1) {
@@ -106,7 +103,6 @@ Model readBlifFile(const std::string& filename) {
                     token1 += model.names[model.names.size() - count1 - 1];
                     for (int i = 1; i < count1; i++) {
                         token1 += "&" + model.names[model.names.size() - i - 1];
-
                     }
                     token = model.names[model.names.size() - 1] + "=" + token1;
                     model.biaodashis.push_back(token);
@@ -134,7 +130,6 @@ Model readBlifFile(const std::string& filename) {
                     token2 += stringArray[0];
                     for (int i = 0; i < count2 - 1; i++) {
                         token2 += "|" + stringArray[static_cast<std::vector<std::string, std::allocator<std::string>>::size_type>(i) + 1];
-
                     }
                     token = model.names[model.names.size() - 1] + "=" + token2;
                     model.biaodashis.push_back(token);
@@ -142,7 +137,6 @@ Model readBlifFile(const std::string& filename) {
                     model.or_assign.push_back(model.names[model.names.size() - 1]);
                     sort(model.or_assign.begin(), model.or_assign.end());
                     model.or_assign.erase(unique(model.or_assign.begin(), model.or_assign.end()), model.or_assign.end());
-
                     if (model.biaodashis.size() > 1) {
                         token3 = model.biaodashis[model.biaodashis.size() - 2];
                         if (token[0] == token3[0]) {
@@ -150,7 +144,6 @@ Model readBlifFile(const std::string& filename) {
                             model.biaodashis.pop_back();
                         }
                     }
-
                 }
                 count3 = 0;
                 count4 = 0;
@@ -159,17 +152,103 @@ Model readBlifFile(const std::string& filename) {
             count0 = 0;
             count1 = 0;
             countDash = 0;
-
         }
     }
-    std::sort(model.names.begin(), model.names.end()); // 排序
-    auto last = std::unique(model.names.begin(), model.names.end()); // 去重
-    model.names.erase(last, model.names.end()); // 删除重复的元素
+    return model;
+}
+
+
+Model readBlifFile(const std::string& filename) {
+    Model model;
+    std::ifstream file(filename);
+    std::string line;
+    int count = 0;
+
+    while (std::getline(file, line)) {
+
+        std::istringstream iss(line);
+        std::string token;
+
+        iss >> token;
+        if (token == ".model") {
+            iss >> model.name;
+        }
+        else if (token == ".inputs") {
+            while (iss >> token) {
+                model.inputs.push_back(token);
+            }
+        }
+        else if (token == ".outputs") {
+            while (iss >> token) {
+                model.outputs.push_back(token);
+            }
+        }
+        else if (token == ".names") {
+            model.names.clear();
+            while (iss >> token) {
+                model.names.push_back(token);
+            }
+            count = 0;
+        }
+        else if (token == ".latch") {
+            std::string input, output, type, control;
+            iss >> input >> output;
+
+            model.latches.push_back("latch (" + input + ", " + output + ");");
+        }
+        else if (token == ".end") {
+            // Do nothing
+        }
+        else {
+            count++;
+            model.digits.clear();
+            for (char ch : token) {
+                model.digits.push_back(ch);
+            }
+            std::string expression;
+            if (count == 1) {
+                expression = model.names[model.names.size() - 1] + "=";
+                for (size_t i = 0; i < model.digits.size(); ++i) {
+                    if (model.digits[i] == '0') {
+                        expression += "!" + model.names[i];
+                    }
+                    else if (model.digits[i] == '1') {
+                        expression += model.names[i] + "&";
+                    }
+                }
+                if (expression.back() == '&') {
+                    expression.pop_back();
+                }
+                model.biaodashis.push_back(expression);
+            }
+            else {
+                std::string token1 = "";
+                expression = model.biaodashis.back();
+                model.biaodashis.pop_back();
+                for (size_t i = 0; i < model.digits.size(); ++i) {
+                    if (model.digits[i] == '0') {
+                        token1 += "!" + model.names[i];
+                    }
+                    else if (model.digits[i] == '1') {
+                        token1 += model.names[i] + "&";
+                    }
+                }
+                if (token1.back() == '&') {
+                    token1.pop_back();
+                }
+                expression += "|" + token1;
+                model.biaodashis.push_back(expression);
+            }
+        }
+    }
+    std::sort(model.names.begin(), model.names.end());
+    auto last = std::unique(model.names.begin(), model.names.end());
+    model.names.erase(last, model.names.end());
 
     return model;
 }
 
-// 将模型信息转换为Verilog代码
+
 void writeVerilogFile(const Model& model, const std::string& filename) {
     std::ofstream verilogFile(filename);
 
@@ -203,7 +282,7 @@ void writeVerilogFile(const Model& model, const std::string& filename) {
 
 
 void print(Model model) {
-    cout << "PIs :";
+    cout << "Input :";
     for (const auto& input : model.inputs)
     {
         cout << input << " ";
@@ -228,24 +307,24 @@ Relationships assignRelationship(const std::string& assignment) {
     std::istringstream iss(assignment);
     std::string leftSide, rightSide;
 
-    // 提取左右两边的赋值
+
     std::getline(iss, leftSide, '=');
     std::getline(iss, rightSide);
 
-    std::string leftNode = leftSide;  // 左侧节点
+    std::string leftNode = leftSide;  
     std::istringstream rightStream(rightSide);
     std::string rightNode;
 
-    // 解析右侧节点
+
     while (std::getline(rightStream, rightNode, '|')) {
         rightNode.erase(remove(rightNode.begin(), rightNode.end(), ' '), rightNode.end());
         if (rightNode.front() == '!') {
-            std::string negatedNode = rightNode.substr(1);  // 去掉'!'
+            std::string negatedNode = rightNode.substr(1);  
             negatedNode.erase(remove(negatedNode.begin(), negatedNode.end(), ' '), negatedNode.end());
             relationships.predecessors[negatedNode].push_back(leftNode);
             relationships.successors[leftNode].push_back(negatedNode);
         }
-        // 处理按位与操作
+
         else if (rightNode.find('&') != std::string::npos) {
             std::istringstream andStream(rightNode);
             std::string andNode;
@@ -256,7 +335,6 @@ Relationships assignRelationship(const std::string& assignment) {
             }
         }
         else {
-            // 处理其他操作符
             relationships.predecessors[rightNode].push_back(leftNode);
             relationships.successors[leftNode].push_back(rightNode);
         }
@@ -264,6 +342,7 @@ Relationships assignRelationship(const std::string& assignment) {
 
     return relationships;
 }
+
 
 
 void getGate(Model model) {
@@ -297,26 +376,6 @@ void getGate(Model model) {
     }
 
     outFile.close(); // 关闭文件
-
-
-    /*
-    std::cout << "Predecessors:\n";
-    for (const auto& pair : totalRelationships.predecessors) {
-        std::cout << pair.first << " ";
-        for (const auto& pred : pair.second) {
-            std::cout << pred << " ";
-        }
-        std::cout << "\n";
-    }
-    std::cout << "Successors:\n";
-    for (const auto& pair : totalRelationships.successors) {
-        std::cout << pair.first << " ";
-        for (const auto& succ : pair.second) {
-            std::cout << succ << " ";
-        }
-        std::cout << "\n";
-    }
-    */
 
 }
 

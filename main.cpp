@@ -19,10 +19,13 @@ int main() {
 
     // 读取BLIF文件
     Model model = readBlifFile(blifFilename);
-    getGate(model);
-
     // 将BLIF转换为Verilog
     writeVerilogFile(model, verilogFilename);
+    getGate(model);
+    model=getAssign(blifFilename);
+
+    
+    
 
     //std::cout << "Conversion complete. Verilog file written to " << verilogFilename << std::endl;
 
