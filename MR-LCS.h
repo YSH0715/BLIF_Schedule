@@ -5,6 +5,7 @@
 #include <regex>
 #include <map>
 #include <algorithm>
+#include <unordered_set>
 #include "blif2verilog.h"
 #include "ALAP.h"
 #include "ASAP.h"
@@ -67,81 +68,76 @@ void Last_Cycle(map<string, int>& last_time, vector<vector<string>>& output, int
         cout << "Output vector is empty.";
         return;
     }
+    unordered_set<string> and_assign(model.and_assign.begin(), model.and_assign.end());
+    unordered_set<string> or_assign(model.or_assign.begin(), model.or_assign.end());
+    unordered_set<string> not_assign(model.not_assign.begin(), model.not_assign.end());
+
     for (const auto& i : output) {
         for (const auto& j : i) {
             int time = INT_MAX;
-            if (find(model.and_assign.begin(), model.and_assign.end(), j) != model.and_assign.end()) {
-                //没有子节点则它的最后可用时间被设置为 latency_constraint - 2
-                // 否则最后可用时间是它的子节点的最后可用时间的最小值减去2
-                if (m[j].child.empty()) {
+            auto& children = m[j].child;
+
+            if (children.empty()) {
+                // 没有子节点的节点
+                if (and_assign.find(j) != and_assign.end()) {
                     last_time[j] = latency_constraint - 2;
                 }
-                else {
-                    for (const auto& str : m[j].child) {
-                        time = min(time, last_time[str]);
-                    }
-                    last_time[j] = time - 2;
-                }
-            }
-            if (find(model.or_assign.begin(), model.or_assign.end(), j) != model.or_assign.end()) {
-                if (m[j].child.empty()) {
+                else if (or_assign.find(j) != or_assign.end()) {
                     last_time[j] = latency_constraint - 3;
                 }
-                else {
-                    for (const auto& str : m[j].child) {
-                        time = min(time, last_time[str]);
-                    }
-                    last_time[j] = time - 3;
-                }
-            }
-            if (find(model.not_assign.begin(), model.not_assign.end(), j) != model.not_assign.end()) {
-                if (m[j].child.empty()) {
+                else if (not_assign.find(j) != not_assign.end()) {
                     last_time[j] = latency_constraint - 1;
                 }
-                else {
-                    for (const auto& str : m[j].child) {
-                        time = min(time, last_time[str]);
-                    }
-                    last_time[j] = time - 1;
+            }
+            else {
+                // 有子节点的节点
+                for (const auto& str : children) {
+                    time = min(time, last_time[str]);
                 }
+                int delay;
+                if (and_assign.find(j) != and_assign.end()) {
+                    delay = 2;
+                }
+                else if (or_assign.find(j) != or_assign.end()) {
+                    delay = 3;
+                }
+                else if (not_assign.find(j) != not_assign.end()) {
+                    delay = 1;
+                }
+                else {
+                    continue; // 安全检查，理论上不会执行到这里
+                }
+                last_time[j] = time - delay;
             }
             ALAPcycle = latency_constraint - last_time[j];
         }
     }
 }
 
+
 void delete_input(map<string, node>& m, Model model) {
-    vector<string> tmp;//用来存储要删除的元素
+    // 创建一个包含所有要保留的节点的集合
+    unordered_set<string> assigned_nodes;
+    assigned_nodes.insert(model.and_assign.begin(), model.and_assign.end());
+    assigned_nodes.insert(model.or_assign.begin(), model.or_assign.end());
+    assigned_nodes.insert(model.not_assign.begin(), model.not_assign.end());
+
+    // 用来存储要删除的元素
+    vector<string> tmp;
     for (auto it = m.begin(); it != m.end(); ) {
-        bool flag = false;
-        for (const auto& assign : model.and_assign) {
-            if (it->first == assign) {
-                flag = true;
-                break;
-            }
-        }
-        for (const auto& assign : model.or_assign) {
-            if (it->first == assign) {
-                flag = true;
-                break;
-            }
-        }
-        for (const auto& assign : model.not_assign) {
-            if (it->first == assign) {
-                flag = true;
-                break;
-            }
-        }
-        if (flag == false) {
+        if (assigned_nodes.find(it->first) == assigned_nodes.end()) {
+            // 如果节点不在模型中定义，则标记为删除
             tmp.push_back(it->first);
-            it = m.erase(it);
+            it = m.erase(it); // 删除元素并更新迭代器
         }
         else {
-            ++it;
+            ++it; // 仅当不删除当前元素时才移动迭代器
         }
     }
+    // 调用 delete_ 函数进行额外的删除操作
     delete_(m, tmp);
 }
+
 
 void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int latency_constraint, map<string, int>& last_time, Model model) {
     if (latency_constraint >= nodecount) {//延迟约束大于节点数量
