@@ -46,8 +46,6 @@ void printGateMR_LCS(Model model) {
 
     vector<vector<string>> output_ALAP;
     ALAP(output_ALAP, m);
-    //reverse(output_ALAP.begin(), output_ALAP.end());
-    //ALAPcycle = output_ALAP.size();
 
     vector<vector<string>> output_MR_LCS;
     map<string, int> last_time;
@@ -59,7 +57,6 @@ void printGateMR_LCS(Model model) {
 
     MR_LCS(output_MR_LCS, n, latency_constraint, last_time, model);
     //printMR_LCS(output_MR_LCS, model);
-    // system("PAUSE");
 }
 
 //确定在给定的延迟约束下，每个逻辑门最晚可以在何时被触发
@@ -140,10 +137,10 @@ void delete_input(map<string, node>& m, Model model) {
 
 
 void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int latency_constraint, map<string, int>& last_time, Model model) {
-    if (latency_constraint >= nodecount) {//延迟约束大于节点数量
-        cout << "resource_&:" << max_resource_needed["AND_GATE"].time_nodes.size() << " resource_|:" << max_resource_needed["OR_GATE"].time_nodes.size() << " resource_!:" << max_resource_needed["NOT_GATE"].time_nodes.size();
+     if (latency_constraint > nodecount) {//延迟约束大于节点数量
+         printMR_LCS(output_MR_LCS, model);
     }
-    else if (ALAPcycle <= latency_constraint && latency_constraint < nodecount) {
+   else if (ALAPcycle <= latency_constraint && latency_constraint <= nodecount) {
         map<string, int> tmp_and_time;
         map<string, int> tmp_or_time;
         while (!last_time.empty()) {
@@ -358,5 +355,22 @@ int Last_time_node(map<string, node>& m, map<string, int>& last_time, string a) 
 }
 
 void printMR_LCS(const vector<vector<string>>& output, Model model) {
-    cout << "resource_&:" << max_resource_needed["AND_GATE"].time_nodes.size() << " resource_|:" << max_resource_needed["OR_GATE"].time_nodes.size() << " resource_!:" << max_resource_needed["NOT_GATE"].time_nodes.size();
+    if (!model.and_assign.empty()) {
+        cout << "与门数: " << max_resource_needed["AND_GATE"].time_nodes.size()<<endl;
+    }
+    else {
+        cout << "与门数: " << 0 << endl;
+    }
+    if (!model.or_assign.empty()) {
+        cout << "或门数: " << max_resource_needed["OR_GATE"].time_nodes.size() << endl;
+    }
+    else {
+        cout << "或门数: " << 0 << endl;
+    }
+    if (!model.not_assign.empty()) {
+        cout << "非门数: " << max_resource_needed["NOT_GATE"].time_nodes.size() << endl;
+    }
+    else {
+        cout << "非门数: " << 0 << endl;
+    }
 }

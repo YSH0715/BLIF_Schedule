@@ -22,7 +22,6 @@ int main() {
     // ½«BLIF×ª»»ÎªVerilog
     writeVerilogFile(model, verilogFilename);
     getGate(model);
-    model=getAssign(blifFilename);
 
     
     

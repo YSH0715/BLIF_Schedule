@@ -10,7 +10,16 @@ output o;
 output p;
 output q;
 
+wire g;
+wire h;
+wire i;
+wire j;
+wire k;
+wire l;
+wire m;
 wire n;
+wire o;
+wire p;
 wire q;
 
 assign g=a|d;
@@ -24,6 +33,5 @@ assign n=l&m;
 assign o=b&h&k;
 assign p=!g;
 assign q=!n;
-
 
 endmodule
