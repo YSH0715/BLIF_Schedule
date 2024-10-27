@@ -14,8 +14,10 @@ using namespace std;
 
 
 int main() {
-    const std::string blifFilename = "example.blif";
+    std::string blifFilename ;
     const std::string verilogFilename = "example.v";
+    cout << "Enter Blif File Name:";
+    cin >> blifFilename;
 
     // ¶ÁÈ¡BLIFÎÄ¼þ
     Model model = readBlifFile(blifFilename);
@@ -34,8 +36,6 @@ int main() {
     cout << "ALAP: " << endl;
     print(model);
     printGateALAP(model);
-    //cout << "Hu: " << endl;
-    //HuScheduling(model);
     cout << "MR_LCS: " << endl;
     printGateMR_LCS(model);
 

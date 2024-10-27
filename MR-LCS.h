@@ -137,10 +137,7 @@ void delete_input(map<string, node>& m, Model model) {
 
 
 void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int latency_constraint, map<string, int>& last_time, Model model) {
-     if (latency_constraint > nodecount) {//延迟约束大于节点数量
-         printMR_LCS(output_MR_LCS, model);
-    }
-   else if (ALAPcycle <= latency_constraint && latency_constraint <= nodecount) {
+    if (ALAPcycle <= latency_constraint) {
         map<string, int> tmp_and_time;
         map<string, int> tmp_or_time;
         while (!last_time.empty()) {
@@ -342,7 +339,7 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
         printMR_LCS(output_MR_LCS, model);
     }
     else {
-        cout << "时间太少无法完成整体任务";
+        cout << "时间太少无法完成整体任务"<<endl;
     }
 }
 

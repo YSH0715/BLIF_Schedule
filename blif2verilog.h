@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -98,6 +99,10 @@ Model readBlifFile(const std::string& filename) {
                         model.and_assign.push_back(model.names[model.names.size() - 1]);
                         break;
                     }
+                    else if (c == '|') {
+                        model.or_assign.push_back(model.names[model.names.size() - 1]);
+                        break;
+                    }
                 }
             }
             else {
@@ -138,9 +143,15 @@ Model readBlifFile(const std::string& filename) {
     auto last = std::unique(model.names.begin(), model.names.end()); 
     model.names.erase(last, model.names.end()); 
 
-    unique(model.and_assign.begin(), model.and_assign.end());
-    unique(model.or_assign.begin(), model.or_assign.end());
-    unique(model.not_assign.begin(), model.not_assign.end());
+    sort(model.and_assign.begin(), model.and_assign.end());
+    sort(model.or_assign.begin(), model.or_assign.end());
+    sort(model.not_assign.begin(), model.not_assign.end());
+    auto last2 = unique(model.and_assign.begin(), model.and_assign.end());
+    auto last3 = unique(model.or_assign.begin(), model.or_assign.end());
+    auto last4 = unique(model.not_assign.begin(), model.not_assign.end());
+    model.and_assign.erase(last2, model.and_assign.end());
+    model.or_assign.erase(last3, model.or_assign.end());
+    model.not_assign.erase(last4, model.not_assign.end());
 
     return model;
 }
