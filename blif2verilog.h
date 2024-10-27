@@ -72,7 +72,8 @@ Model readBlifFile(const std::string& filename) {
         }
         else {
             count++;
-            model.digits.clear();
+            model.digits.clear(); 
+            bool hasAnd = false, hasOr = false, hasNot = false;
             for (char ch : token) {
                 model.digits.push_back(ch);
             }
@@ -81,9 +82,11 @@ Model readBlifFile(const std::string& filename) {
                 for (size_t i = 0; i < model.digits.size(); ++i) {
                     if (model.digits[i] == '0') {
                         expression = expression + "!" + model.names[i];
+                        hasNot = true;
                     }
                     else if (model.digits[i] == '1') {
                         expression = expression + model.names[i] + "&";
+                        hasAnd = true;
                     }
                 }
                 if (expression.back() == '&') {
@@ -112,15 +115,18 @@ Model readBlifFile(const std::string& filename) {
                 for (size_t i = 0; i < model.digits.size(); ++i) {
                     if (model.digits[i] == '0') {
                         token1 = token1 + "!" + model.names[i];
+                        hasNot = true;
                     }
                     else if (model.digits[i] == '1') {
                         token1 = token1 + model.names[i] + "&";
+                        hasAnd = true;
                     }
                 }
                 if (token1.back() == '&') {
                     token1.pop_back();
                 }
                 expression = expression + "|" + token1;
+                hasOr = true;
                 model.biaodashis.push_back(expression);
                 for (char c : expression) {
                     if (c == '!') {
@@ -135,6 +141,20 @@ Model readBlifFile(const std::string& filename) {
                         model.or_assign.push_back(model.names[model.names.size() - 1]);
                         break;
                     }
+                }
+            }
+            if (hasAnd && hasOr || hasAnd && hasNot || hasOr && hasNot) {
+                string tempVar = "n" + to_string(model.names.size());
+                //model.names.push_back(tempVar);
+                //model.biaodashis[model.biaodashis.size() - 1] = tempVar + "=" + expression.substr(expression.find('=') + 1);
+                if (hasAnd) {
+                    model.and_assign.push_back(tempVar);
+                }
+                if (hasOr) {
+                    model.or_assign.push_back(tempVar);
+                }
+                if (hasNot) {
+                    model.not_assign.push_back(tempVar);
                 }
             }
         }
