@@ -339,7 +339,7 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
         printMR_LCS(output_MR_LCS, model);
     }
     else {
-        cout << "时间太少无法完成整体任务"<<endl;
+        cout << "时间太少无法完成整体任务" << endl;
     }
 }
 
@@ -353,7 +353,7 @@ int Last_time_node(map<string, node>& m, map<string, int>& last_time, string a) 
 
 void printMR_LCS(const vector<vector<string>>& output, Model model) {
     if (!model.and_assign.empty()) {
-        cout << "与门数: " << max_resource_needed["AND_GATE"].time_nodes.size()<<endl;
+        cout << "与门数: " << max_resource_needed["AND_GATE"].time_nodes.size() << endl;
     }
     else {
         cout << "与门数: " << 0 << endl;

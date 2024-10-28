@@ -23,7 +23,7 @@ int main() {
     Model model = readBlifFile(blifFilename);
     // ½«BLIF×ª»»ÎªVerilog
     writeVerilogFile(model, verilogFilename);
-    getGate(model);
+    Model model2 = getGate(model);
 
     
     
@@ -32,12 +32,12 @@ int main() {
 
     cout << "ASAP: " << endl;
     print(model);
-    ASAPprintGate(model);
+    printGateASAP(model2);
     cout << "ALAP: " << endl;
     print(model);
-    printGateALAP(model);
+    printGateALAP(model2);
     cout << "MR_LCS: " << endl;
-    printGateMR_LCS(model);
+    printGateMR_LCS(model2);
 
     
 

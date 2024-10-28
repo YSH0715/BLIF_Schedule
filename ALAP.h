@@ -101,11 +101,11 @@ void printALAP(const vector<vector<string>>& output, Model model) {
 	}
 }
 
-void printString(string stri) {
-	cout << "{ ";
-	cout << stri[0];
-	for (size_t i = 1; i < stri.size(); ++i) {
-		std::cout << " " << stri[i];
-	}
-	cout << " }";
-}
+//void printString(string stri) {
+//	cout << "{ ";
+//	cout << stri[0];
+//	for (size_t i = 1; i < stri.size(); ++i) {
+//		std::cout << " " << stri[i];
+//	}
+//	cout << " }";
+//}

@@ -21,7 +21,7 @@ struct Model {
     vector<string> or_assign;
     vector<string> not_assign;
 };
-
+std::vector<std::string> getnewnode(string a, int count_);
 
 
 Model readBlifFile(const std::string& filename) {
@@ -147,9 +147,9 @@ Model readBlifFile(const std::string& filename) {
     return model;
 }
 
-
 void writeVerilogFile(const Model& model, const std::string& filename) {
     std::ofstream verilogFile(filename);
+
 
     verilogFile << "module " << model.name << ";\n";
     for (const auto& input : model.inputs) {
@@ -212,7 +212,7 @@ Relationships assignRelationship(const std::string& assignment) {
     while (std::getline(rightStream, rightNode, '|')) {
         rightNode.erase(remove(rightNode.begin(), rightNode.end(), ' '), rightNode.end());
         if (rightNode.front() == '!') {
-            std::string negatedNode = rightNode.substr(1);
+            std::string negatedNode = rightNode.substr(1);  
             negatedNode.erase(remove(negatedNode.begin(), negatedNode.end(), ' '), negatedNode.end());
             relationships.predecessors[negatedNode].push_back(leftNode);
             relationships.successors[leftNode].push_back(negatedNode);
@@ -243,99 +243,58 @@ Model getGate(Model model) {
         std::string token;
         std::string token1;
         std::string expression;
+        std::string node;
+        std::vector<std::string> newnode;
         int count = -1;
         if (model.biaodashis.at(i).size() > 5) {
-            for (char c : model.biaodashis.at(i)) {
-                count++;
-                if (c == '!') {
-                    token = "n" + to_string(count_);
-                    count_++;
-                    token1 = token + "=" + "!" + model.biaodashis.at(i).at(count + 1);
-                    model.not_assign.push_back(token);
-                    assignments.push_back(token1);
-                    std::string m;
-                    m = model.biaodashis.at(i).at(0);
-                    expression = m + "=" + token + model.biaodashis.at(i).substr(count + 2);
-                    auto it = std::find(model.not_assign.begin(), model.not_assign.end(), m);
-                    if (it != model.not_assign.end()) {
-                        model.not_assign.erase(it); // 删除找到的元素  
-                    }
-                    if (model.biaodashis.at(i).at(count + 2) == '&') {
-                        model.and_assign.push_back(m);
-                    }
-                    if (model.biaodashis.at(i).at(count + 2) == '|') {
-                        model.or_assign.push_back(m);
-                    }
-                    assignments.push_back(expression);
+            node = model.biaodashis.at(i);
+            while (node.size() > 5) {
+                newnode = getnewnode(node, count_);
+                if (newnode.size() == 1) {
+                    //assignments.push_back(newnode.at(0));
                     break;
                 }
-                else if (c == '&') {
-                    if (model.biaodashis.at(i).at(count + 2) == '&') {
-                        assignments.push_back(model.biaodashis.at(i));
-                    }
-                    else if (model.biaodashis.at(i).at(count + 1) == '!') {
-                        token = "n" + to_string(count_);
-                        count_++;
-                        token1 = token + "=" + "!" + model.biaodashis.at(i).at(count + 2);
+                else {
+                    token = newnode.at(1);
+                    token1 = newnode.at(2);
+                    std::string m;
+                    m = newnode.at(3);
+                    if (newnode.at(0).at(0) == '!') {
                         model.not_assign.push_back(token);
-                        assignments.push_back(token1);
-                        std::string m;
-                        m = model.biaodashis.at(i).at(0);
-                        expression = m + "=" + model.biaodashis.at(i).at(2) + model.biaodashis.at(i).at(3) + token;
-                        assignments.push_back(expression);
+                        auto it = std::find(model.not_assign.begin(), model.not_assign.end(), m);
+                        if (it != model.not_assign.end()) {
+                            model.not_assign.erase(it); // 删除找到的元素  
+                        }
                     }
-                    else {
-                        token = "n" + to_string(count_);
-                        count_++;
-                        token1 = token + "=" + model.biaodashis.at(i).at(count - 1) + "&" + model.biaodashis.at(i).at(count + 1);
+                    else if (newnode.at(0).at(0) == '&') {
                         model.and_assign.push_back(token);
-                        assignments.push_back(token1);
-                        std::string m;
-                        m = model.biaodashis.at(i).at(0);
-                        expression = m + "=" + token + model.biaodashis.at(i).substr(count + 2);
                         auto it = std::find(model.and_assign.begin(), model.and_assign.end(), m);
                         if (it != model.and_assign.end()) {
                             model.and_assign.erase(it); // 删除找到的元素  
                         }
-                        model.or_assign.push_back(m);
-                        assignments.push_back(expression);
                     }
-                    break;
-                }
-                else if (c == '|') {
-                    if (model.biaodashis.at(i).at(count + 2) == '|') {
-                        assignments.push_back(model.biaodashis.at(i));
-                    }
-                    else if (model.biaodashis.at(i).at(count + 1) == '!') {
-                        token = "n" + to_string(count_);
-                        count_++;
-                        token1 = token + "=" + "!" + model.biaodashis.at(i).at(count + 2);
-                        model.not_assign.push_back(token);
-                        assignments.push_back(token1);
-                        std::string m;
-                        m = model.biaodashis.at(i).at(0);
-                        expression = m + "=" + model.biaodashis.at(i).at(2) + model.biaodashis.at(i).at(3) + token;
-                        assignments.push_back(expression);
-                    }
-                    else {
-                        token = "n" + to_string(count_);
-                        count_++;
-                        token1 = token + "=" + model.biaodashis.at(i).at(count - 1) + "|" + model.biaodashis.at(i).at(count + 1);
-                        model.or_assign.push_back(token);//
-                        assignments.push_back(token1);
-                        std::string m;
-                        m = model.biaodashis.at(i).at(0);
-                        expression = m + "=" + token + model.biaodashis.at(i).substr(count + 2);
+                    else if (newnode.at(0).at(0) == '|') {
+                        model.or_assign.push_back(token);
                         auto it = std::find(model.or_assign.begin(), model.or_assign.end(), m);
                         if (it != model.or_assign.end()) {
                             model.or_assign.erase(it); // 删除找到的元素  
                         }
-                        model.and_assign.push_back(m);
-                        assignments.push_back(expression);
                     }
-                    break;
+                    assignments.push_back(token1);
+                    if (newnode.at(4).at(0) == '!') {
+                        model.not_assign.push_back(m);
+                    }
+                    else if (newnode.at(4).at(0) == '&') {
+                        model.and_assign.push_back(m);
+                    }
+                    else if (newnode.at(4).at(0) == '|') {
+                        model.or_assign.push_back(m);
+                    }
+                    node = newnode.at(5);
                 }
+                count_++;
             }
+            assignments.push_back(node);
         }
         else {
             assignments.push_back(model.biaodashis.at(i));
@@ -367,5 +326,133 @@ Model getGate(Model model) {
     }
 
     outFile.close(); // 关闭文件
+    sort(model.and_assign.begin(), model.and_assign.end());
+    sort(model.or_assign.begin(), model.or_assign.end());
+    sort(model.not_assign.begin(), model.not_assign.end());
+    auto last2 = unique(model.and_assign.begin(), model.and_assign.end());
+    auto last3 = unique(model.or_assign.begin(), model.or_assign.end());
+    auto last4 = unique(model.not_assign.begin(), model.not_assign.end());
+    model.and_assign.erase(last2, model.and_assign.end());
+    model.or_assign.erase(last3, model.or_assign.end());
+    model.not_assign.erase(last4, model.not_assign.end());
     return model;
+}
+
+std::vector<std::string> getnewnode(string a, int count_) {
+    std::vector<std::string> newnode;
+    std::string token;
+    std::string token1;
+    std::string expression;
+    int fucount = 0;
+    for (char c : a) {
+        if (c == '!' || c == '&' || c == '|') fucount++;
+    }
+    int count = -1;
+    for (char c : a) {
+        count++;
+        if (c == '!') {
+            token = to_string(count_);
+            count_++;
+            token1 = token + "=" + "!" + a.at(count + 1);
+            newnode.push_back("!");
+            newnode.push_back(token);
+            newnode.push_back(token1);
+            std::string m;
+            m = a.at(0);
+            expression = m + "=" + token + a.substr(count + 2);
+            newnode.push_back(m);
+            std::string n;
+            n = a.at(count + 2);
+            newnode.push_back(n);
+            newnode.push_back(expression);
+            break;
+        }
+        else if (c == '&') {
+            if (a.at(count + 2) == '&' && fucount == 2) {
+                newnode.push_back(a);
+            }
+            else if (a.at(count + 1) == '!') {
+                token = to_string(count_);
+                count_++;
+                token1 = token + "=" + "!" + a.at(count + 2);
+                newnode.push_back("!");
+                newnode.push_back(token);
+                newnode.push_back(token1);
+                std::string m;
+                m = a.at(0);
+                newnode.push_back(m);
+                std::string n;
+                n = a.at(3);
+                newnode.push_back(n);
+                if (count + 3 > a.size()) {
+                    expression = m + "=" + a.at(2) + a.at(3) + token;
+                }
+                else {
+                    expression = m + "=" + a.at(2) + a.at(3) + token + a.substr(count + 3);
+                }
+                newnode.push_back(expression);
+            }
+            else {
+                token = to_string(count_);
+                count_++;
+                token1 = token + "=" + a.at(count - 1) + "&" + a.at(count + 1);
+                newnode.push_back("&");
+                newnode.push_back(token);
+                newnode.push_back(token1);
+                std::string m;
+                m = a.at(0);
+                newnode.push_back(m);
+                expression = m + "=" + token + a.substr(count + 2);
+                std::string n;
+                n = a.at(count + 2);
+                newnode.push_back(n);
+                newnode.push_back(expression);
+            }
+            break;
+        }
+        else if (c == '|') {
+            if (a.at(count + 2) == '|' && fucount == 2) {
+                newnode.push_back(a);
+            }
+            else if (a.at(count + 1) == '!') {
+                token = to_string(count_);
+                count_++;
+                token1 = token + "=" + "!" + a.at(count + 2);
+                newnode.push_back("!");
+                newnode.push_back(token);
+                newnode.push_back(token1);
+                std::string m;
+                m = a.at(0);
+                newnode.push_back(m);
+                std::string n;
+                n = a.at(3);
+                newnode.push_back(n);
+                if (count + 3 > a.size()) {
+                    expression = m + "=" + a.at(2) + a.at(3) + token;
+                }
+                else {
+                    expression = m + "=" + a.at(2) + a.at(3) + token + a.substr(count + 3);
+                }
+                newnode.push_back(expression);
+            }
+            else {
+                token = to_string(count_);
+                count_++;
+                token1 = token + "=" + a.at(count - 1) + "|" + a.at(count + 1);
+                newnode.push_back("|");
+                newnode.push_back(token);
+                newnode.push_back(token1);
+                std::string m;
+                m = a.at(0);
+                newnode.push_back(m);
+                expression = m + "=" + token + a.substr(count + 2);
+                std::string n;
+                n = a.at(count + 2);
+                newnode.push_back(n);
+                newnode.push_back(expression);
+            }
+            break;
+        }
+    }
+    return newnode;
 }
