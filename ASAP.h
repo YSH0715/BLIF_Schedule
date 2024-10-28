@@ -47,7 +47,8 @@ void input(vector<vector<string>>& Vec_Dti, string FileName) {
 	vector<string> temp_line;
 	string line;
 	ifstream in(FileName);  //读入文件
-	regex pat_regex("[a-z]+");  //匹配一个或多个小写字母
+	//regex pat_regex("[a-z]+");  //匹配一个或多个小写字母
+	regex pat_regex("([a-z]+[0-9]*|[0-9]*[a-z]+)");
 
 	while (getline(in, line)) {  //按行读取
 		temp_line.clear();

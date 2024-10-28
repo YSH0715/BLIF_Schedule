@@ -6,26 +6,22 @@
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
-#include <unordered_set>
 
 using namespace std;
-
-
-
 
 struct Model {
     std::string name;
     std::vector<std::string> inputs;
     std::vector<std::string> outputs;
     std::vector<std::string> names;
-    std::vector<std::string> latches;
-    std::vector<std::string> biaodashis;
     std::vector<std::string> wires;
+    std::vector<std::string> biaodashis;
     std::vector<char> digits;
     vector<string> and_assign;
     vector<string> or_assign;
     vector<string> not_assign;
 };
+
 
 
 Model readBlifFile(const std::string& filename) {
@@ -72,8 +68,7 @@ Model readBlifFile(const std::string& filename) {
         }
         else {
             count++;
-            model.digits.clear(); 
-            bool hasAnd = false, hasOr = false, hasNot = false;
+            model.digits.clear();
             for (char ch : token) {
                 model.digits.push_back(ch);
             }
@@ -82,11 +77,9 @@ Model readBlifFile(const std::string& filename) {
                 for (size_t i = 0; i < model.digits.size(); ++i) {
                     if (model.digits[i] == '0') {
                         expression = expression + "!" + model.names[i];
-                        hasNot = true;
                     }
                     else if (model.digits[i] == '1') {
                         expression = expression + model.names[i] + "&";
-                        hasAnd = true;
                     }
                 }
                 if (expression.back() == '&') {
@@ -102,10 +95,6 @@ Model readBlifFile(const std::string& filename) {
                         model.and_assign.push_back(model.names[model.names.size() - 1]);
                         break;
                     }
-                    else if (c == '|') {
-                        model.or_assign.push_back(model.names[model.names.size() - 1]);
-                        break;
-                    }
                 }
             }
             else {
@@ -115,18 +104,15 @@ Model readBlifFile(const std::string& filename) {
                 for (size_t i = 0; i < model.digits.size(); ++i) {
                     if (model.digits[i] == '0') {
                         token1 = token1 + "!" + model.names[i];
-                        hasNot = true;
                     }
                     else if (model.digits[i] == '1') {
                         token1 = token1 + model.names[i] + "&";
-                        hasAnd = true;
                     }
                 }
                 if (token1.back() == '&') {
                     token1.pop_back();
                 }
                 expression = expression + "|" + token1;
-                hasOr = true;
                 model.biaodashis.push_back(expression);
                 for (char c : expression) {
                     if (c == '!') {
@@ -141,20 +127,6 @@ Model readBlifFile(const std::string& filename) {
                         model.or_assign.push_back(model.names[model.names.size() - 1]);
                         break;
                     }
-                }
-            }
-            if (hasAnd && hasOr || hasAnd && hasNot || hasOr && hasNot) {
-                string tempVar = "n" + to_string(model.names.size());
-                //model.names.push_back(tempVar);
-                //model.biaodashis[model.biaodashis.size() - 1] = tempVar + "=" + expression.substr(expression.find('=') + 1);
-                if (hasAnd) {
-                    model.and_assign.push_back(tempVar);
-                }
-                if (hasOr) {
-                    model.or_assign.push_back(tempVar);
-                }
-                if (hasNot) {
-                    model.not_assign.push_back(tempVar);
                 }
             }
         }
@@ -172,14 +144,12 @@ Model readBlifFile(const std::string& filename) {
     model.and_assign.erase(last2, model.and_assign.end());
     model.or_assign.erase(last3, model.or_assign.end());
     model.not_assign.erase(last4, model.not_assign.end());
-
     return model;
 }
 
 
 void writeVerilogFile(const Model& model, const std::string& filename) {
     std::ofstream verilogFile(filename);
-
 
     verilogFile << "module " << model.name << ";\n";
     for (const auto& input : model.inputs) {
@@ -235,19 +205,18 @@ Relationships assignRelationship(const std::string& assignment) {
     std::getline(iss, leftSide, '=');
     std::getline(iss, rightSide);
 
-    std::string leftNode = leftSide;  
+    std::string leftNode = leftSide; 
     std::istringstream rightStream(rightSide);
     std::string rightNode;
 
     while (std::getline(rightStream, rightNode, '|')) {
         rightNode.erase(remove(rightNode.begin(), rightNode.end(), ' '), rightNode.end());
         if (rightNode.front() == '!') {
-            std::string negatedNode = rightNode.substr(1);  
+            std::string negatedNode = rightNode.substr(1);
             negatedNode.erase(remove(negatedNode.begin(), negatedNode.end(), ' '), negatedNode.end());
             relationships.predecessors[negatedNode].push_back(leftNode);
             relationships.successors[leftNode].push_back(negatedNode);
         }
-
         else if (rightNode.find('&') != std::string::npos) {
             std::istringstream andStream(rightNode);
             std::string andNode;
@@ -267,11 +236,110 @@ Relationships assignRelationship(const std::string& assignment) {
 }
 
 
-
-void getGate(Model model) {
+Model getGate(Model model) {
     std::vector<std::string> assignments;
-    for (int i = 0;i < model.biaodashis.size();i++) {
-        assignments.push_back(model.biaodashis.at(i));
+    int count_ = 1;
+    for (int i = 0; i < model.biaodashis.size(); i++) {
+        std::string token;
+        std::string token1;
+        std::string expression;
+        int count = -1;
+        if (model.biaodashis.at(i).size() > 5) {
+            for (char c : model.biaodashis.at(i)) {
+                count++;
+                if (c == '!') {
+                    token = "n" + to_string(count_);
+                    count_++;
+                    token1 = token + "=" + "!" + model.biaodashis.at(i).at(count + 1);
+                    model.not_assign.push_back(token);
+                    assignments.push_back(token1);
+                    std::string m;
+                    m = model.biaodashis.at(i).at(0);
+                    expression = m + "=" + token + model.biaodashis.at(i).substr(count + 2);
+                    auto it = std::find(model.not_assign.begin(), model.not_assign.end(), m);
+                    if (it != model.not_assign.end()) {
+                        model.not_assign.erase(it); // 删除找到的元素  
+                    }
+                    if (model.biaodashis.at(i).at(count + 2) == '&') {
+                        model.and_assign.push_back(m);
+                    }
+                    if (model.biaodashis.at(i).at(count + 2) == '|') {
+                        model.or_assign.push_back(m);
+                    }
+                    assignments.push_back(expression);
+                    break;
+                }
+                else if (c == '&') {
+                    if (model.biaodashis.at(i).at(count + 2) == '&') {
+                        assignments.push_back(model.biaodashis.at(i));
+                    }
+                    else if (model.biaodashis.at(i).at(count + 1) == '!') {
+                        token = "n" + to_string(count_);
+                        count_++;
+                        token1 = token + "=" + "!" + model.biaodashis.at(i).at(count + 2);
+                        model.not_assign.push_back(token);
+                        assignments.push_back(token1);
+                        std::string m;
+                        m = model.biaodashis.at(i).at(0);
+                        expression = m + "=" + model.biaodashis.at(i).at(2) + model.biaodashis.at(i).at(3) + token;
+                        assignments.push_back(expression);
+                    }
+                    else {
+                        token = "n" + to_string(count_);
+                        count_++;
+                        token1 = token + "=" + model.biaodashis.at(i).at(count - 1) + "&" + model.biaodashis.at(i).at(count + 1);
+                        model.and_assign.push_back(token);
+                        assignments.push_back(token1);
+                        std::string m;
+                        m = model.biaodashis.at(i).at(0);
+                        expression = m + "=" + token + model.biaodashis.at(i).substr(count + 2);
+                        auto it = std::find(model.and_assign.begin(), model.and_assign.end(), m);
+                        if (it != model.and_assign.end()) {
+                            model.and_assign.erase(it); // 删除找到的元素  
+                        }
+                        model.or_assign.push_back(m);
+                        assignments.push_back(expression);
+                    }
+                    break;
+                }
+                else if (c == '|') {
+                    if (model.biaodashis.at(i).at(count + 2) == '|') {
+                        assignments.push_back(model.biaodashis.at(i));
+                    }
+                    else if (model.biaodashis.at(i).at(count + 1) == '!') {
+                        token = "n" + to_string(count_);
+                        count_++;
+                        token1 = token + "=" + "!" + model.biaodashis.at(i).at(count + 2);
+                        model.not_assign.push_back(token);
+                        assignments.push_back(token1);
+                        std::string m;
+                        m = model.biaodashis.at(i).at(0);
+                        expression = m + "=" + model.biaodashis.at(i).at(2) + model.biaodashis.at(i).at(3) + token;
+                        assignments.push_back(expression);
+                    }
+                    else {
+                        token = "n" + to_string(count_);
+                        count_++;
+                        token1 = token + "=" + model.biaodashis.at(i).at(count - 1) + "|" + model.biaodashis.at(i).at(count + 1);
+                        model.or_assign.push_back(token);//
+                        assignments.push_back(token1);
+                        std::string m;
+                        m = model.biaodashis.at(i).at(0);
+                        expression = m + "=" + token + model.biaodashis.at(i).substr(count + 2);
+                        auto it = std::find(model.or_assign.begin(), model.or_assign.end(), m);
+                        if (it != model.or_assign.end()) {
+                            model.or_assign.erase(it); // 删除找到的元素  
+                        }
+                        model.and_assign.push_back(m);
+                        assignments.push_back(expression);
+                    }
+                    break;
+                }
+            }
+        }
+        else {
+            assignments.push_back(model.biaodashis.at(i));
+        }
     }
 
 
@@ -299,7 +367,5 @@ void getGate(Model model) {
     }
 
     outFile.close(); // 关闭文件
-
+    return model;
 }
-
-
