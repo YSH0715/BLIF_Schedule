@@ -9,6 +9,8 @@
 
 using namespace std;
 
+
+
 struct Model {
     std::string name;
     std::vector<std::string> inputs;
@@ -76,10 +78,15 @@ Model readBlifFile(const std::string& filename) {
                 expression = model.names[model.names.size() - 1] + "=";
                 for (size_t i = 0; i < model.digits.size(); ++i) {
                     if (model.digits[i] == '0') {
-                        expression = expression + "!" + model.names[i];
+                        expression = expression + "!" + model.names[i] + "&";
                     }
                     else if (model.digits[i] == '1') {
-                        expression = expression + model.names[i] + "&";
+                        if (expression.back() == '&' || expression.back() == '=') {
+                            expression = expression + model.names[i] + "&";
+                        }
+                        else {
+                            expression = expression + "&" + model.names[i];
+                        }
                     }
                 }
                 if (expression.back() == '&') {
@@ -89,11 +96,11 @@ Model readBlifFile(const std::string& filename) {
                 for (char c : expression) {
                     if (c == '!') {
                         model.not_assign.push_back(model.names[model.names.size() - 1]);
-                        break;
+
                     }
                     else if (c == '&') {
                         model.and_assign.push_back(model.names[model.names.size() - 1]);
-                        break;
+
                     }
                 }
             }
@@ -103,10 +110,15 @@ Model readBlifFile(const std::string& filename) {
                 model.biaodashis.pop_back();
                 for (size_t i = 0; i < model.digits.size(); ++i) {
                     if (model.digits[i] == '0') {
-                        token1 = token1 + "!" + model.names[i];
+                        token1 = token1 + "!" + model.names[i] + "&";
                     }
                     else if (model.digits[i] == '1') {
-                        token1 = token1 + model.names[i] + "&";
+                        if (token1.empty() || token1.back() == '&') {
+                            token1 = token1 + model.names[i] + "&";
+                        }
+                        else {
+                            token1 = token1 + "&" + model.names[i];
+                        }
                     }
                 }
                 if (token1.back() == '&') {
@@ -117,23 +129,23 @@ Model readBlifFile(const std::string& filename) {
                 for (char c : expression) {
                     if (c == '!') {
                         model.not_assign.push_back(model.names[model.names.size() - 1]);
-                        break;
+
                     }
                     else if (c == '&') {
                         model.and_assign.push_back(model.names[model.names.size() - 1]);
-                        break;
+
                     }
                     else if (c == '|') {
                         model.or_assign.push_back(model.names[model.names.size() - 1]);
-                        break;
+
                     }
                 }
             }
         }
     }
-    std::sort(model.names.begin(), model.names.end()); 
-    auto last = std::unique(model.names.begin(), model.names.end()); 
-    model.names.erase(last, model.names.end()); 
+    std::sort(model.names.begin(), model.names.end());
+    auto last = std::unique(model.names.begin(), model.names.end());
+    model.names.erase(last, model.names.end());
 
     sort(model.and_assign.begin(), model.and_assign.end());
     sort(model.or_assign.begin(), model.or_assign.end());
@@ -146,6 +158,7 @@ Model readBlifFile(const std::string& filename) {
     model.not_assign.erase(last4, model.not_assign.end());
     return model;
 }
+
 
 void writeVerilogFile(const Model& model, const std::string& filename) {
     std::ofstream verilogFile(filename);
@@ -202,21 +215,24 @@ Relationships assignRelationship(const std::string& assignment) {
     std::istringstream iss(assignment);
     std::string leftSide, rightSide;
 
+
     std::getline(iss, leftSide, '=');
     std::getline(iss, rightSide);
 
-    std::string leftNode = leftSide; 
+    std::string leftNode = leftSide;
     std::istringstream rightStream(rightSide);
     std::string rightNode;
+
 
     while (std::getline(rightStream, rightNode, '|')) {
         rightNode.erase(remove(rightNode.begin(), rightNode.end(), ' '), rightNode.end());
         if (rightNode.front() == '!') {
-            std::string negatedNode = rightNode.substr(1);  
+            std::string negatedNode = rightNode.substr(1);  // ???'!'
             negatedNode.erase(remove(negatedNode.begin(), negatedNode.end(), ' '), negatedNode.end());
             relationships.predecessors[negatedNode].push_back(leftNode);
             relationships.successors[leftNode].push_back(negatedNode);
         }
+
         else if (rightNode.find('&') != std::string::npos) {
             std::istringstream andStream(rightNode);
             std::string andNode;
@@ -227,6 +243,7 @@ Relationships assignRelationship(const std::string& assignment) {
             }
         }
         else {
+
             relationships.predecessors[rightNode].push_back(leftNode);
             relationships.successors[leftNode].push_back(rightNode);
         }
@@ -265,19 +282,43 @@ Model getGate(Model model) {
                         if (it != model.not_assign.end()) {
                             model.not_assign.erase(it); // 删除找到的元素  
                         }
+                        auto it1 = std::find(model.or_assign.begin(), model.or_assign.end(), m);
+                        if (it1 != model.or_assign.end()) {
+                            model.or_assign.erase(it1); // 删除找到的元素  
+                        }
+                        auto it2 = std::find(model.and_assign.begin(), model.and_assign.end(), m);
+                        if (it2 != model.and_assign.end()) {
+                            model.and_assign.erase(it2); // 删除找到的元素  
+                        }
                     }
                     else if (newnode.at(0).at(0) == '&') {
                         model.and_assign.push_back(token);
-                        auto it = std::find(model.and_assign.begin(), model.and_assign.end(), m);
-                        if (it != model.and_assign.end()) {
-                            model.and_assign.erase(it); // 删除找到的元素  
+                        auto it = std::find(model.not_assign.begin(), model.not_assign.end(), m);
+                        if (it != model.not_assign.end()) {
+                            model.not_assign.erase(it); // 删除找到的元素  
+                        }
+                        auto it1 = std::find(model.or_assign.begin(), model.or_assign.end(), m);
+                        if (it1 != model.or_assign.end()) {
+                            model.or_assign.erase(it1); // 删除找到的元素  
+                        }
+                        auto it2 = std::find(model.and_assign.begin(), model.and_assign.end(), m);
+                        if (it2 != model.and_assign.end()) {
+                            model.and_assign.erase(it2); // 删除找到的元素  
                         }
                     }
                     else if (newnode.at(0).at(0) == '|') {
                         model.or_assign.push_back(token);
-                        auto it = std::find(model.or_assign.begin(), model.or_assign.end(), m);
-                        if (it != model.or_assign.end()) {
-                            model.or_assign.erase(it); // 删除找到的元素  
+                        auto it = std::find(model.not_assign.begin(), model.not_assign.end(), m);
+                        if (it != model.not_assign.end()) {
+                            model.not_assign.erase(it); // 删除找到的元素  
+                        }
+                        auto it1 = std::find(model.or_assign.begin(), model.or_assign.end(), m);
+                        if (it1 != model.or_assign.end()) {
+                            model.or_assign.erase(it1); // 删除找到的元素  
+                        }
+                        auto it2 = std::find(model.and_assign.begin(), model.and_assign.end(), m);
+                        if (it2 != model.and_assign.end()) {
+                            model.and_assign.erase(it2); // 删除找到的元素  
                         }
                     }
                     assignments.push_back(token1);
@@ -343,9 +384,20 @@ std::vector<std::string> getnewnode(string a, int count_) {
     std::string token;
     std::string token1;
     std::string expression;
-    int fucount = 0;
+    bool fucount = false;
+    int andcount = 0;
+    int orcount = 0;
+    int notcount = 0;
     for (char c : a) {
-        if (c == '!' || c == '&' || c == '|') fucount++;
+        if (c == '&') andcount++;
+        if (c == '|') orcount++;
+        if (c == '!') notcount++;
+    }
+    if (andcount == 0 && notcount == 0 && orcount > 0) {
+        fucount = true;
+    }
+    if (orcount == 0 && notcount == 0 && andcount > 0) {
+        fucount = true;
     }
     int count = -1;
     for (char c : a) {
@@ -368,7 +420,7 @@ std::vector<std::string> getnewnode(string a, int count_) {
             break;
         }
         else if (c == '&') {
-            if (a.at(count + 2) == '&' && fucount == 2) {
+            if (a.at(count + 2) == '&' && fucount == true) {
                 newnode.push_back(a);
             }
             else if (a.at(count + 1) == '!') {
@@ -411,7 +463,7 @@ std::vector<std::string> getnewnode(string a, int count_) {
             break;
         }
         else if (c == '|') {
-            if (a.at(count + 2) == '|' && fucount == 2) {
+            if (a.at(count + 2) == '|' && fucount == true) {
                 newnode.push_back(a);
             }
             else if (a.at(count + 1) == '!') {
@@ -455,4 +507,53 @@ std::vector<std::string> getnewnode(string a, int count_) {
         }
     }
     return newnode;
+}
+
+Model readVerilogFile(const std::string& filename) {
+    Model model;
+    std::ifstream file(filename);
+    std::string line;
+    int count = 0;
+
+    std::vector<std::string> stringArray(100);
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        std::string token;
+        std::string token1;
+        std::string expression;
+
+
+        iss >> token;
+        if (token == "wire") {
+            while (iss >> token) {
+                model.wires.push_back(token);
+            }
+        }
+        else if (token == "assign") {
+            while (iss >> token) {
+                token1 = token.substr(0, token.size() - 1);
+                model.biaodashis.push_back(token1);
+                expression = token.substr(0, 1);
+                for (char c : token1) {
+                    if (c == '!') {
+                        model.not_assign.push_back(expression);
+
+                    }
+                    else if (c == '&') {
+                        model.and_assign.push_back(expression);
+
+                    }
+                    else if (c == '|') {
+                        model.or_assign.push_back(expression);
+
+                    }
+                }
+            }
+        }
+        else {
+            continue;
+        }
+    }
+
+    return model;
 }

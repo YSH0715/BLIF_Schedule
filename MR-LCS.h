@@ -26,7 +26,7 @@ map<string, time_node> max_resource_needed = {
 map<string, time_node> tem_resource = max_resource_needed;  //存储暂时的资源数量可能会变化
 map<string, int>ComsumingTime = { {"AND_GATE", 2},{"OR_GATE", 3},{"NOT_GATE", 1} };
 void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int latency_constraint, map<string, int>& last_time, Model model);
-void printMR_LCS(const vector<vector<string>>& output, Model model);
+void printMR_LCS(const vector<vector<string>>& output, Model model, int latency_constraint);
 void Last_Cycle(map<string, int>& last_time, vector<vector<string>>& output_ALAP, int latency_constraint, map<string, node>& m, Model model);
 void delete_input(map<string, node>& m, Model model);
 int Last_time_node(map<string, node>& m, map<string, int>& last_time, string a);
@@ -50,7 +50,7 @@ void printGateMR_LCS(Model model) {
     vector<vector<string>> output_MR_LCS;
     map<string, int> last_time;
     int latency_constraint;   //cycle数
-    cout << "输入cycle数：";
+    cout << "Enter the number of cycles ：";
     cin >> latency_constraint;
     Last_Cycle(last_time, output_ALAP, latency_constraint, a, model);
 
@@ -142,6 +142,7 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
         map<string, int> tmp_or_time;
         while (!last_time.empty()) {
             int and_size = 0, or_size = 0, not_size = 0;
+            vector<string> tmp_node;
             vector<string> tmp;
             vector<string> to_erase;
             for (auto it = tmp_and_time.begin(); it != tmp_and_time.end(); ) {
@@ -208,6 +209,7 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
                             int i = tem_resource["AND_GATE"].time_nodes.size() + 1;
                             tem_resource["AND_GATE"].time_nodes.emplace(i, 1);
                         }
+                        tmp_node.push_back(it->first);
                         tmp_and_time[it->first] = 1;
                     }
                     if (find(model.or_assign.begin(), model.or_assign.end(), it->first) != model.or_assign.end()) {
@@ -224,6 +226,7 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
                             int i = tem_resource["OR_GATE"].time_nodes.size() + 1;
                             tem_resource["OR_GATE"].time_nodes.emplace(i, 1);
                         }
+                        tmp_node.push_back(it->first);
                         tmp_or_time[it->first] = 1;
                     }
                     if (find(model.not_assign.begin(), model.not_assign.end(), it->first) != model.not_assign.end()) {
@@ -234,6 +237,7 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
                             int i = tem_resource["NOT_GATE"].time_nodes.size() + 1;
                             tem_resource["NOT_GATE"].time_nodes.emplace(i, 0);
                         }
+                        tmp_node.push_back(it->first);
                         tmp.push_back(it->first);
                     }
                     to_erase.push_back(it->first);
@@ -280,6 +284,7 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
                                 }
                                 break;
                             }
+                            tmp_node.push_back(it->second);
                             tmp_and_time[it->second] = 1;
                             to_erase.push_back(it->second);
                             it = sorted_and_map.erase(it);
@@ -300,6 +305,7 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
                                 }
                                 break;
                             }
+                            tmp_node.push_back(it->second);
                             tmp_or_time[it->second] = 1;
                             to_erase.push_back(it->second);
                             it = sorted_or_map.erase(it);
@@ -314,6 +320,7 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
                     for (auto it = sorted_not_map.begin(); it != sorted_not_map.end(); ) {
                         if (not_size > 0) {
                             not_size -= 1;
+                            tmp_node.push_back(it->second);
                             tmp.push_back(it->second);
                             to_erase.push_back(it->second);
                             it = sorted_not_map.erase(it);
@@ -325,9 +332,8 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
                     }
                 }
             }
-            if (!tmp.empty()) {
-                output_MR_LCS.push_back(tmp);
-            }
+            output_MR_LCS.push_back(tmp_node);
+
             for (const auto& key : to_erase) {
                 if (last_time.find(key) != last_time.end()) {
                     last_time.erase(key);
@@ -336,7 +342,7 @@ void MR_LCS(vector<vector<string>>& output_MR_LCS, map<string, node>& m, int lat
             delete_(m, tmp);
         }
         max_resource_needed = tem_resource;
-        printMR_LCS(output_MR_LCS, model);
+        printMR_LCS(output_MR_LCS, model, latency_constraint);
     }
     else {
         cout << "时间太少无法完成整体任务" << endl;
@@ -351,23 +357,71 @@ int Last_time_node(map<string, node>& m, map<string, int>& last_time, string a) 
     return last;
 }
 
-void printMR_LCS(const vector<vector<string>>& output, Model model) {
+void printMR_LCS(const vector<vector<string>>& output, Model model, int latency_constraint) {
+    int n = max_resource_needed["AND_GATE"].time_nodes.size() + max_resource_needed["OR_GATE"].time_nodes.size() + max_resource_needed["NOT_GATE"].time_nodes.size();
+    cout << "Total: " << n << "resources" << endl;
     if (!model.and_assign.empty()) {
-        cout << "与门数: " << max_resource_needed["AND_GATE"].time_nodes.size() << endl;
+        cout << "resource_and: " << max_resource_needed["AND_GATE"].time_nodes.size() << endl;
     }
     else {
-        cout << "与门数: " << 0 << endl;
+        cout << "resource_and: " << 0 << endl;
     }
     if (!model.or_assign.empty()) {
-        cout << "或门数: " << max_resource_needed["OR_GATE"].time_nodes.size() << endl;
+        cout << "resource_or: " << max_resource_needed["OR_GATE"].time_nodes.size() << endl;
     }
     else {
-        cout << "或门数: " << 0 << endl;
+        cout << "resource_or: " << 0 << endl;
     }
     if (!model.not_assign.empty()) {
-        cout << "非门数: " << max_resource_needed["NOT_GATE"].time_nodes.size() << endl;
+        cout << "resource_not: " << max_resource_needed["NOT_GATE"].time_nodes.size() << endl;
     }
     else {
-        cout << "非门数: " << 0 << endl;
+        cout << "resource_not: " << 0 << endl;
+    }
+    vector<vector<string>> output_MR_LCS;
+    output_MR_LCS = output;
+    for (; output_MR_LCS.size() < latency_constraint;) {
+        vector<string> tmp;
+        output_MR_LCS.push_back(tmp);
+    }
+    int count = 0;
+    string str_and;
+    string str_or;
+    string str_not;
+    for (const auto& i : output_MR_LCS) {
+        cout << "Cycle " << count << ":";
+        count++;
+        for (const auto& j : i) {
+
+            for (int i = 0; i < model.and_assign.size(); i++) {
+                if (j == model.and_assign.at(i)) {
+                    for (char ch : j) {
+                        str_and.push_back(ch); // 将字符添加到 str_and 中  
+                    }
+                }
+            }
+            for (int i = 0; i < model.or_assign.size(); i++) {
+                if (j == model.or_assign.at(i)) {
+                    for (char ch : j) {
+                        str_or.push_back(ch); // 将字符添加到 str_and 中  
+                    }
+                }
+            }
+            for (int i = 0; i < model.not_assign.size(); i++) {
+                if (j == model.not_assign.at(i)) {
+                    for (char ch : j) {
+                        str_not.push_back(ch); // 将字符添加到 str_and 中  
+                    }
+                }
+            }
+
+        }
+        printString(str_and);
+        printString(str_or);
+        printString(str_not);
+        str_and.clear();
+        str_or.clear();
+        str_not.clear();
+        cout << endl;
     }
 }

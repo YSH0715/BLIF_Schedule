@@ -131,7 +131,6 @@
     <ClInclude Include="ALAP.h" />
     <ClInclude Include="ASAP.h" />
     <ClInclude Include="blif2verilog.h" />
-    <ClInclude Include="Hu.h" />
     <ClInclude Include="MR-LCS.h" />
   </ItemGroup>
   <ItemGroup>
